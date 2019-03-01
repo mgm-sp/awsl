@@ -48,7 +48,7 @@ function help(){
 }
 
 function installer() {
-	echo -e "${GREEN}Installing missing dependecies${NC}"
+	echo -e "${GREEN}Installing missing dependencies${NC}"
 	apt-get update
 	apt-get -y install jq python3-pip rsync
 	bash -c "python3 -m pip install awscli"
@@ -108,6 +108,7 @@ function start_instance() {
 # sending files to AWS instance
 function send_files(){
 	echo -e "\n${GREEN}Sending files to instance.${NC}"
+	set -e
 	chmod 400 ./ssh_key.pem
 	rsync -e 'ssh -i ./ssh_key.pem -oStrictHostKeyChecking=no' -a ./sync_me/ $USERNAME@$PublicDnsName:$PathOnAWS
 }
