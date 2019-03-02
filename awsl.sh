@@ -7,7 +7,7 @@ YELLOW='\e[33m'
 BOLD='\e[1m'
 NC='\e[0m' # No Color
 PublicDnsName=""
-PathOnAWS="/home/ec2-user/aswl"
+PathOnAWS="/home/ec2-user/awsl"
 
 ## SET INSTACE OPTIONS HERE
 INSTACE_ID=""
@@ -19,21 +19,21 @@ function logo (){
 
 local version="0.1.2"
 
-echo -e "\e[21m                                                                   ${NC}
+echo -e "\e[21m                                                                   \e[0m
                                                           
-        db       .M\"\"\"bgd \`7MMF'     A     \`7MF'\`7MMF'      
-       ;MM:     ,MI    \"Y   \`MA     ,MA     ,V    MM        
-      ,V^MM.    \`MMb.        VM:   ,VVM:   ,V     MM        
-     ,M  \`MM      \`YMMNq.     MM.  M' MM.  M'     MM        
-     AbmmmqMA   .     \`MM     \`MM A'  \`MM A'      MM      , 
-    A'     VML  Mb     dM      :MM;    :MM;       MM     ,M 
-  .AMA.   .AMMA.P\"Ybmmd\"        VF      VF      .JMMmmmmMMM  ${BOLD}v$version\e[21m
+        db  \`7MMF'     A     \`7MF' .M\"\"\"bgd \`7MMF'      
+       ;MM:   \`MA     ,MA     ,V  ,MI    \"Y   MM        
+      ,V^MM.   VM:   ,VVM:   ,V   \`MMb.       MM        
+     ,M  \`MM    MM.  M' MM.  M'     \`YMMNq.   MM        
+     AbmmmqMA   \`MM A'  \`MM A'    .     \`MM   MM      , 
+    A'     VML   :MM;    :MM;     Mb     dM   MM     ,M 
+  .AMA.   .AMMA.  VF      VF      P\"Ybmmd\"  .JMMmmmmMMM  ${BOLD}v$version\e[21m
                                                                    
-${NC}"
+\e[0m"
 }
 
 function help(){
-	echo "ASWL can be used to automate the following steps:"
+	echo "AWSL can be used to automate the following steps:"
 	echo "   - starting the AWS EC2 instance"
 	echo "   - copying sync_me folder (hashcat commands, custom masks/rules/wordlists, hashes)"
 	echo "   - starting the cracking process on the AWS EC2 instance"
@@ -43,7 +43,7 @@ function help(){
 	echo -e "\n\n${BOLD}Usage: awsl.sh [<PATH_ON_AWS>]\n${NC}"
 	echo -e "Optional parameters:"
 	echo -e "\t<PATH_ON_AWS>:\tThis is the path where the files will be stored."
-	echo -e "\t\t\tdefault: /home/ec2-user/aswl"
+	echo -e "\t\t\tdefault: /home/ec2-user/awsl"
 	echo ""
 	exit 1
 }
@@ -66,10 +66,16 @@ function checks(){
 
 	## check if SSH key is there
 	if [ ! -f ./ssh_key.pem ]; then
-	    echo "ssh_key.pem not found!"
-	    exit -1
+		echo -e "${RED}Error: ssh_key.pem not found!${NC}"
+		return 1
 	else
 		chmod 400 ./ssh_key.pem
+	fi
+
+	## check if istance options are set
+	if [[ $INSTACE_ID = "" || $REGION = "" ]]; then
+		echo -e "${RED}Error: You must set the INSTACE_ID and REGION parameters in this file${NC}"
+		return 1
 	fi
 
 	## set correct path if set
@@ -89,7 +95,7 @@ function check_running() {
 		elif [[ $state = *"pending"* ]]; then
 			sleep 10
 		else
-			echo -e "\e[41mError: Instance has unknown state \"$(echo $state | cut -d ' ' -f 2)\"!${NC}"
+			echo -e "${RED}Error: Instance has unknown state \"$(echo $state | cut -d ' ' -f 2)\"!${NC}"
 			exit -1
 		fi
 	done
@@ -150,13 +156,7 @@ if [[ "$1" = "-h" || "$1" = "--help" ]]; then
 	help
 fi
 
-checks
-
-## check if istance options are set
-if [[ $INSTACE_ID = "" || $REGION = "" ]]; then
-	echo -e "${RED}You must set the INSTACE_ID and REGION parameters in this file${NC}"
-	exit -1
-else
+if checks; then
 	start_instance
 	send_files
 	hashcat
