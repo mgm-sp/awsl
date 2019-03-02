@@ -6,6 +6,7 @@ It can perform the following steps:
 
 - starting the AWS EC2 instance
 - copying the contents of the *sync_me* folder to it
+- running specified hashcat commands
 - transfering the results to your shared OwnCloud folder
 - stopping the AWS EC2 instance
 
@@ -80,8 +81,7 @@ Simply run the script:
 
 	bash awsl.sh
 
-Since EC2 does not support running commands via AWSCLI you need to run the 'commands.sh' manually on the AWS instance.
-The required command is shown right before connecting to the instance (basically just cd into folder, execute script in screen and then exit from screen and quit).
+All cracked and uncracked hashes are sent to your OwnCloud share when the cracking process is complete.
 
 <br/>
 

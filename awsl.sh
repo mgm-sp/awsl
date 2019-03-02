@@ -17,7 +17,7 @@ USERNAME="ec2-user"
 
 function logo (){
 
-local version="0.1.1"
+local version="0.1.2"
 
 echo -e "\e[21m                                                                   ${NC}
                                                           
@@ -36,6 +36,7 @@ function help(){
 	echo "ASWL can be used to automate the following steps:"
 	echo "   - starting the AWS EC2 instance"
 	echo "   - copying sync_me folder (hashcat commands, custom masks/rules/wordlists, hashes)"
+	echo "   - starting the cracking process on the AWS EC2 instance"
 	echo "   - transfering the results to your shared OwnCloud folder"
 	echo "   - stopping the AWS EC2 instance"
 
@@ -48,7 +49,7 @@ function help(){
 }
 
 function installer() {
-	echo -e "${GREEN}Installing missing dependencies${NC}"
+	echo -e "${GREEN}Installing missing dependecies${NC}"
 	apt-get update
 	apt-get -y install jq python3-pip rsync
 	bash -c "python3 -m pip install awscli"
@@ -57,13 +58,33 @@ function installer() {
 	exit 1
 }
 
+function checks(){
+	## checking dependecies
+	if [[ $(aws --version 2>&1) == *"aws: command not found"* || $(jq -V 2>&1) == *"command not found"* ]]; then
+		installer
+	fi
+
+	## check if SSH key is there
+	if [ ! -f ./ssh_key.pem ]; then
+	    echo "ssh_key.pem not found!"
+	    exit -1
+	else
+		chmod 400 ./ssh_key.pem
+	fi
+
+	## set correct path if set
+	if [[ ! -z $@ ]]; then
+		PathOnAWS=$1
+	fi
+}
+
 # check if instance has started
 function check_running() {
 	while true; do
 		local state=$(aws ec2 describe-instances --instance-id $INSTACE_ID --region $REGION | jq -r '.Reservations[] | {"name": .Instances[].PublicDnsName, "State": .Instances[].State.Name,}' | jq -r .[])
 		if [[ $state == *"running"* ]]; then
 			PublicDnsName=$(echo $state | cut -d ' ' -f 1)
-			echo -e "Initializing ${GREEN}$PublicDnsName${NC}"
+			echo -e "[+] Initializing ${GREEN}$PublicDnsName${NC}"
 			break
 		elif [[ $state = *"pending"* ]]; then
 			sleep 10
@@ -79,10 +100,10 @@ function check_state() {
 	while true; do
 		local state=$(aws ec2 describe-instance-status --instance-id $INSTACE_ID --region $REGION | jq -r '.[] | {"State":.[].InstanceStatus.Status} .State')
 		if [[ $state = "ok" ]]; then
-			echo -e "${GREEN}Done!${NC}"
+			echo -e "${GREEN} | Done!${NC}"
 			break
 		elif [[ $state = "initializing" ]]; then
-			echo -e "${YELLOW}still $state...${NC}"
+			echo -e "${YELLOW} | still $state...${NC}"
 			sleep 25
 		else
 			echo -e "${RED}Error: Instance has unknown state \"$state\"!${NC}"
@@ -94,12 +115,12 @@ function check_state() {
 # start ec2 instance
 function start_instance() {
 	echo "Waiting for instance to start (may need some minutes)"
-	## Exit if awscli is not configured, otherwise start instance
+	# Exit if awscli is not configured, otherwise start instance
 	set -e
 	bash -c "aws ec2 start-instances --instance-id $INSTACE_ID --region $REGION > /dev/null"
 	sleep 15
 
-	## check if instance is up an running
+	# check if instance is up an running
 	check_running
 	sleep 25
 	check_state
@@ -107,19 +128,15 @@ function start_instance() {
 
 # sending files to AWS instance
 function send_files(){
-	echo -e "\n${GREEN}Sending files to instance.${NC}"
-	set -e
-	chmod 400 ./ssh_key.pem
+	echo -e "\n[+] Sending files to instance."
 	rsync -e 'ssh -i ./ssh_key.pem -oStrictHostKeyChecking=no' -a ./sync_me/ $USERNAME@$PublicDnsName:$PathOnAWS
 }
 
 # open ssh connection to instance
 function hashcat(){
-	echo -e "\nSadly EC2 instances does not support running commands..."
-	echo -e "\e[4mType the following after successful connection:\e[24m\n"
-	echo -e "${BOLD}cd $PathOnAWS && screen ./commands.sh\n"
-	echo -e "Leave screen with STRG+A+D and then exit${NC}"
-	ssh -oStrictHostKeyChecking=no -i ./ssh_key.pem $USERNAME@$PublicDnsName
+	echo -e "\n${GREEN}[+] \e[5mRunning hashcat commands.\e[25m${NC}"
+	echo -e "\nResults will be uploaded to your OwnCloud share."
+	ssh -oStrictHostKeyChecking=no -i ./ssh_key.pem $USERNAME@$PublicDnsName 'cd aswl/ && screen -L -d -m ./commands.sh'
 }
 
 
@@ -133,15 +150,7 @@ if [[ "$1" = "-h" || "$1" = "--help" ]]; then
 	help
 fi
 
-## checking dependecies
-if [[ $(aws --version 2>&1) == *"aws: command not found"* || $(jq -V 2>&1) == *"command not found"* ]]; then
-	installer
-fi
-
-## set correct path if set
-if [[ ! -z $@ ]]; then
-	PathOnAWS=$1
-fi
+checks
 
 ## check if istance options are set
 if [[ $INSTACE_ID = "" || $REGION = "" ]]; then
