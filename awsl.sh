@@ -49,7 +49,7 @@ function help(){
 }
 
 function installer() {
-	echo -e "${GREEN}Installing missing dependecies${NC}"
+	echo -e "${GREEN}Installing missing dependencies${NC}"
 	apt-get update
 	apt-get -y install jq python3-pip rsync
 	bash -c "python3 -m pip install awscli"
@@ -136,7 +136,7 @@ function send_files(){
 function hashcat(){
 	echo -e "\n${GREEN}[+] \e[5mRunning hashcat commands.\e[25m${NC}"
 	echo -e "\nResults will be uploaded to your OwnCloud share."
-	ssh -oStrictHostKeyChecking=no -i ./ssh_key.pem $USERNAME@$PublicDnsName 'cd aswl/ && screen -L -d -m ./commands.sh'
+	ssh -oStrictHostKeyChecking=no -i ./ssh_key.pem $USERNAME@$PublicDnsName 'cd $PathOnAWS && screen -L -d -m ./commands.sh'
 }
 
 
