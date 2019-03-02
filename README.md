@@ -1,7 +1,7 @@
 AWSL
 ====
 
-ASWL (short for **A**mazon **W**eb **S**ervice **L**auncher) is a simple bash script that can be used to automate the process of password cracking on an AWS EC2 instance.
+AWSL (short for **A**mazon **W**eb **S**ervice **L**auncher) is a simple bash script that can be used to automate the process of password cracking on an AWS EC2 instance.
 It can perform the following steps:
 
 - starting the AWS EC2 instance
